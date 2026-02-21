@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Settings as Gear, Smartphone } from "lucide-react";
-import { Device, getDevices, getSettings, provision, putSettings, subscribeLogs, uninstall } from "./api";
+import type { Device } from "./api";
+import { getDevices, getSettings, provision, putSettings, subscribeLogs, uninstall } from "./api";
 
 function clampId(v: number) {
   if (!Number.isFinite(v)) return 1;
