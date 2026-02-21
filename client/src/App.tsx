@@ -38,6 +38,8 @@ export default function App() {
     return off;
   }, []);
 
+  const [autoSearch, setAutoSearch] = useState<boolean>(true);
+
   async function refreshDevices() {
     const d = await getDevices();
     setDevices(d);
@@ -45,9 +47,13 @@ export default function App() {
 
   useEffect(() => {
     refreshDevices().catch(() => void 0);
+  }, []);
+
+  useEffect(() => {
+    if (!autoSearch) return;
     const t = setInterval(() => refreshDevices().catch(() => void 0), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [autoSearch]);
 
   const headerRight = useMemo(() => {
     if (!settings) return null;
@@ -119,14 +125,24 @@ export default function App() {
           </div>
 
           <div className="lg:col-span-2 rounded-2xl bg-slate-900/60 border border-slate-800 p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-slate-200">Gafas Conectadas</div>
-              <button
-                className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
-                onClick={() => refreshDevices().catch(console.error)}
-              >
-                Refresh
-              </button>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={autoSearch}
+                    onChange={(e) => setAutoSearch(e.target.checked)}
+                  />
+                  Búsqueda automática
+                </label>
+                <button
+                  className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
+                  onClick={() => refreshDevices().catch(console.error)}
+                >
+                  Buscar ahora
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
