@@ -5,3 +5,23 @@ client/node_modules
 dist
 client/dist
 
+
+# macOS
+.DS_Store
+
+# Env
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+client/dist-ssr
+
+# Runtime
+*.pid
