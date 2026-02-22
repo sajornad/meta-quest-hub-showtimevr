@@ -65,7 +65,28 @@ export async function uninstall(serial: string): Promise<{ ok: boolean; error?: 
 export function subscribeLogs(onLine: (line: any) => void) {
   const es = new EventSource(`${API_BASE}/api/logs/stream`);
   es.onmessage = (ev) => {
-    try { onLine(JSON.parse(ev.data)); } catch { /* ignore */ }
+    try {
+      onLine(JSON.parse(ev.data));
+    } catch {
+      /* ignore */
+    }
   };
   return () => es.close();
+}
+
+export type FsEntry = { name: string; path: string; isDir: boolean };
+export type FsListResponse = { path: string; parent: string | null; entries: FsEntry[]; error?: string };
+
+export async function fsHome(): Promise<{ home: string }> {
+  const r = await fetch(`${API_BASE}/api/fs/home`);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+export async function fsList(p: string): Promise<FsListResponse> {
+  const u = new URL(`${API_BASE}/api/fs/list`, window.location.origin);
+  u.searchParams.set("path", p);
+  const r = await fetch(u.toString());
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
 }

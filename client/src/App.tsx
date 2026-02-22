@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Settings as Gear, Smartphone } from "lucide-react";
 import type { Device } from "./api";
-import { getDevices, getSettings, provision, putSettings, subscribeLogs, uninstall } from "./api";
+import { fsHome, fsList, getDevices, getSettings, provision, putSettings, subscribeLogs, uninstall, type FsEntry } from "./api";
 
 function clampId(v: number) {
   if (!Number.isFinite(v)) return 1;
@@ -21,6 +21,14 @@ export default function App() {
   const [logs, setLogs] = useState<{ ts: number; level: string; message: string }[]>([]);
   const [busySerial, setBusySerial] = useState<string | null>(null);
   const [busyOp, setBusyOp] = useState<"install" | "uninstall" | null>(null);
+  const [progressBySerial, setProgressBySerial] = useState<Record<string, { pct: number; label: string }>>({});
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerField, setPickerField] = useState<string | null>(null);
+  const [pickerMode, setPickerMode] = useState<"file" | "dir">("file");
+  const [pickerPath, setPickerPath] = useState<string>("");
+  const [pickerEntries, setPickerEntries] = useState<FsEntry[]>([]);
+  const [pickerParent, setPickerParent] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -34,6 +42,18 @@ export default function App() {
 
   useEffect(() => {
     const off = subscribeLogs((line) => {
+      // Capture progress hints from server logs.
+      const msg = String(line?.message ?? "");
+      const m = msg.match(/\[progress serial=([^\s\]]+) pct=(\d+)\]\s*(.*)$/);
+      if (m) {
+        const serial = m[1];
+        const pct = Number(m[2]);
+        const label = m[3] || "Working";
+        if (Number.isFinite(pct)) {
+          setProgressBySerial((prev) => ({ ...prev, [serial]: { pct, label } }));
+        }
+      }
+
       setLogs((prev) => {
         const next = [...prev, line];
         return next.length > 400 ? next.slice(next.length - 400) : next;
@@ -77,6 +97,21 @@ export default function App() {
   }, [settings]);
 
   const canProvision = (serial: string) => !busySerial || busySerial === serial;
+
+  async function loadPicker(p: string) {
+    const r = await fsList(p);
+    setPickerPath(r.path);
+    setPickerEntries(r.entries);
+    setPickerParent(r.parent);
+  }
+
+  async function openPicker(field: string, mode: "file" | "dir") {
+    setPickerField(field);
+    setPickerMode(mode);
+    setPickerOpen(true);
+    const { home } = await fsHome();
+    await loadPicker(home);
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -180,8 +215,23 @@ export default function App() {
                     </div>
 
                     {isBusy && (
-                      <div className="pt-1">
-                        <div className="loading-line" aria-label="Working" />
+                      <div className="pt-1 space-y-1">
+                        {progressBySerial[d.serial] ? (
+                          <>
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span className="truncate">{progressBySerial[d.serial]!.label}</span>
+                              <span className="tabular-nums">{progressBySerial[d.serial]!.pct}%</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-slate-800 overflow-hidden" aria-label="Progress">
+                              <div
+                                className="h-full bg-emerald-500 transition-all"
+                                style={{ width: `${Math.max(0, Math.min(100, progressBySerial[d.serial]!.pct))}%` }}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="loading-line" aria-label="Working" />
+                        )}
                       </div>
                     )}
 
@@ -218,6 +268,11 @@ export default function App() {
                         } finally {
                           setBusySerial(null);
                           setBusyOp(null);
+                          setProgressBySerial((prev) => {
+                            const next = { ...prev };
+                            delete next[d.serial];
+                            return next;
+                          });
                         }
                       }}
                     >
@@ -236,6 +291,11 @@ export default function App() {
                         } finally {
                           setBusySerial(null);
                           setBusyOp(null);
+                          setProgressBySerial((prev) => {
+                            const next = { ...prev };
+                            delete next[d.serial];
+                            return next;
+                          });
                         }
                       }}
                     >
@@ -272,7 +332,20 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label className="block">
                   <div className="text-xs text-slate-400 mb-1">APK path</div>
-                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.apkPath ?? ""} onChange={(e) => setDraft({ ...draft, apkPath: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2"
+                      value={draft.apkPath ?? ""}
+                      onChange={(e) => setDraft({ ...draft, apkPath: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs"
+                      onClick={() => openPicker("apkPath", "file").catch(console.error)}
+                    >
+                      Browse
+                    </button>
+                  </div>
                 </label>
 
                 <label className="block">
@@ -282,17 +355,56 @@ export default function App() {
 
                 <label className="block">
                   <div className="text-xs text-slate-400 mb-1">Base config.txt path</div>
-                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.configBasePath ?? ""} onChange={(e) => setDraft({ ...draft, configBasePath: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2"
+                      value={draft.configBasePath ?? ""}
+                      onChange={(e) => setDraft({ ...draft, configBasePath: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs"
+                      onClick={() => openPicker("configBasePath", "file").catch(console.error)}
+                    >
+                      Browse
+                    </button>
+                  </div>
                 </label>
 
                 <label className="block">
                   <div className="text-xs text-slate-400 mb-1">Branding folder path (local)</div>
-                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.brandingPath ?? ""} onChange={(e) => setDraft({ ...draft, brandingPath: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2"
+                      value={draft.brandingPath ?? ""}
+                      onChange={(e) => setDraft({ ...draft, brandingPath: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs"
+                      onClick={() => openPicker("brandingPath", "dir").catch(console.error)}
+                    >
+                      Browse
+                    </button>
+                  </div>
                 </label>
 
                 <label className="block">
                   <div className="text-xs text-slate-400 mb-1">360 video path (local)</div>
-                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.videoPath ?? ""} onChange={(e) => setDraft({ ...draft, videoPath: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 rounded-lg bg-slate-900 border border-slate-800 px-3 py-2"
+                      value={draft.videoPath ?? ""}
+                      onChange={(e) => setDraft({ ...draft, videoPath: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs"
+                      onClick={() => openPicker("videoPath", "file").catch(console.error)}
+                    >
+                      Browse
+                    </button>
+                  </div>
                 </label>
 
                 <div className="hidden md:block" />
@@ -334,6 +446,78 @@ export default function App() {
                   Save
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {pickerOpen && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+            <div className="w-full max-w-3xl rounded-2xl bg-slate-950 border border-slate-800 p-5 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Select {pickerMode === "dir" ? "folder" : "file"}</div>
+                  <div className="text-xs text-slate-400 break-all">{pickerPath}</div>
+                </div>
+                <button
+                  className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
+                  onClick={() => setPickerOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3 py-2 disabled:opacity-50"
+                  disabled={!pickerParent}
+                  onClick={() => {
+                    if (pickerParent) loadPicker(pickerParent).catch(console.error);
+                  }}
+                >
+                  Up
+                </button>
+                {pickerMode === "dir" && (
+                  <button
+                    className="text-xs rounded-md bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-semibold"
+                    onClick={() => {
+                      if (!pickerField) return;
+                      setDraft((prev: any) => ({ ...prev, [pickerField]: pickerPath }));
+                      setPickerOpen(false);
+                    }}
+                  >
+                    Use this folder
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[50vh] overflow-auto rounded-xl border border-slate-800">
+                {pickerEntries.map((e) => (
+                  <button
+                    key={e.path}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-900 flex items-center justify-between"
+                    onClick={() => {
+                      if (e.isDir) {
+                        loadPicker(e.path).catch(console.error);
+                        return;
+                      }
+                      if (pickerMode === "file") {
+                        if (!pickerField) return;
+                        setDraft((prev: any) => ({ ...prev, [pickerField]: e.path }));
+                        setPickerOpen(false);
+                      }
+                    }}
+                  >
+                    <span className="truncate">{e.name}{e.isDir ? "/" : ""}</span>
+                    <span className="text-xs text-slate-500">{e.isDir ? "dir" : "file"}</span>
+                  </button>
+                ))}
+              </div>
+
+              {pickerMode === "file" && (
+                <div className="text-xs text-slate-400">
+                  Tip: click a folder to enter; click a file to select it.
+                </div>
+              )}
             </div>
           </div>
         )}
