@@ -15,3 +15,33 @@ body {
   background: #0b1220;
   color: #e5e7eb;
 }
+
+/* Indeterminate loading line (for install/uninstall feedback) */
+.loading-line {
+  position: relative;
+  height: 3px;
+  width: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.18); /* slate-400 */
+}
+
+.loading-line::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  left: -35%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0), rgba(16, 185, 129, 0.95), rgba(16, 185, 129, 0)); /* emerald */
+  animation: loading-line 1.05s ease-in-out infinite;
+}
+
+@keyframes loading-line {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}

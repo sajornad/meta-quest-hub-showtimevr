@@ -20,6 +20,7 @@ export default function App() {
   const [autoInc, setAutoInc] = useState<boolean>(true);
   const [logs, setLogs] = useState<{ ts: number; level: string; message: string }[]>([]);
   const [busySerial, setBusySerial] = useState<string | null>(null);
+  const [busyOp, setBusyOp] = useState<"install" | "uninstall" | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -156,27 +157,35 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {devices.map((d) => (
-                <div key={d.serial} className="rounded-xl bg-slate-950/60 border border-slate-800 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-slate-300" />
-                      <div>
-                        <div className="text-sm font-semibold">{d.model ?? "Meta Quest"}</div>
-                        <div className="text-xs text-slate-400 break-all">{d.serial}</div>
+              {devices.map((d) => {
+                const isBusy = busySerial === d.serial;
+                return (
+                  <div key={d.serial} className="rounded-xl bg-slate-950/60 border border-slate-800 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4 text-slate-300" />
+                        <div>
+                          <div className="text-sm font-semibold">{d.model ?? "Meta Quest"}</div>
+                          <div className="text-xs text-slate-400 break-all">{d.serial}</div>
+                        </div>
                       </div>
+                      <span
+                        className={
+                          "text-xs px-2 py-1 rounded-full border " +
+                          (d.installed ? "bg-emerald-900/30 border-emerald-700 text-emerald-300" : "bg-slate-900 border-slate-700 text-slate-300")
+                        }
+                      >
+                        {d.installed ? "Installed" : "Not installed"}
+                      </span>
                     </div>
-                    <span
-                      className={
-                        "text-xs px-2 py-1 rounded-full border " +
-                        (d.installed ? "bg-emerald-900/30 border-emerald-700 text-emerald-300" : "bg-slate-900 border-slate-700 text-slate-300")
-                      }
-                    >
-                      {d.installed ? "Installed" : "Not installed"}
-                    </span>
-                  </div>
 
-                  <div>
+                    {isBusy && (
+                      <div className="pt-1">
+                        <div className="loading-line" aria-label="Working" />
+                      </div>
+                    )}
+
+                    <div>
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                       <span>Battery</span>
                       <span>{typeof d.battery === "number" ? `${d.battery}%` : "—"}</span>
@@ -196,6 +205,7 @@ export default function App() {
                       onClick={async () => {
                         try {
                           setBusySerial(d.serial);
+                          setBusyOp("install");
                           // ensure lastUsedID sync
                           await putSettings({ lastUsedID: currentId });
                           const r = await provision(d.serial, currentId);
@@ -207,10 +217,11 @@ export default function App() {
                           await refreshDevices();
                         } finally {
                           setBusySerial(null);
+                          setBusyOp(null);
                         }
                       }}
                     >
-                      Install & Sync
+                      {isBusy && busyOp === "install" ? "Installing…" : "Install & Sync"}
                     </button>
 
                     <button
@@ -219,18 +230,21 @@ export default function App() {
                       onClick={async () => {
                         try {
                           setBusySerial(d.serial);
+                          setBusyOp("uninstall");
                           await uninstall(d.serial);
                           await refreshDevices();
                         } finally {
                           setBusySerial(null);
+                          setBusyOp(null);
                         }
                       }}
                     >
-                      Uninstall
+                      {isBusy && busyOp === "uninstall" ? "Uninstalling…" : "Uninstall"}
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {devices.length === 0 && (
                 <div className="text-sm text-slate-400">No devices detected. Conecta el Quest por USB y asegúrate que ADB esté instalado y autorizado.</div>
