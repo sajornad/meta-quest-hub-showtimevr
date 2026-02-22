@@ -29,7 +29,7 @@ export function parseAdbDevices(output: string): AdbDevice[] {
     // Example: SERIAL device product:... model:Quest_2 device:... transport_id:1
     const parts = line.split(/\s+/);
     if (parts.length < 2) continue;
-    const serial = parts[0];
+    const serial = parts[0] ?? "";
     const state = parts[1];
     if (state !== "device") continue;
     const kv = Object.fromEntries(
@@ -41,9 +41,9 @@ export function parseAdbDevices(output: string): AdbDevice[] {
     );
     devices.push({
       serial,
-      model: kv.model,
-      device: kv.device,
-      transportId: kv.transport_id,
+      model: (kv as any).model,
+      device: (kv as any).device,
+      transportId: (kv as any).transport_id,
     });
   }
   return devices;

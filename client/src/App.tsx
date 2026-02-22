@@ -13,6 +13,8 @@ function clampId(v: number) {
 
 export default function App() {
   const [settings, setSettings] = useState<any>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [draft, setDraft] = useState<any>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [currentId, setCurrentId] = useState<number>(1);
   const [autoInc, setAutoInc] = useState<boolean>(true);
@@ -23,6 +25,7 @@ export default function App() {
     (async () => {
       const s = await getSettings();
       setSettings(s);
+      setDraft(s);
       setCurrentId(s.lastUsedID ?? 1);
       setAutoInc(!!s.autoIncrement);
     })().catch(console.error);
@@ -58,10 +61,17 @@ export default function App() {
   const headerRight = useMemo(() => {
     if (!settings) return null;
     return (
-      <div className="flex items-center gap-2 text-xs text-slate-300">
-        <span className="hidden sm:inline">{settings.packageName ? `pkg: ${settings.packageName}` : "pkg: (set in settings.json)"}</span>
+      <button
+        className="flex items-center gap-2 text-xs text-slate-300 hover:text-white"
+        onClick={() => {
+          setDraft(settings);
+          setShowSettings(true);
+        }}
+        title="Settings"
+      >
+        <span className="hidden sm:inline">{settings.packageName ? `pkg: ${settings.packageName}` : "pkg: (set packageName)"}</span>
         <Gear className="h-5 w-5 opacity-80" />
-      </div>
+      </button>
     );
   }, [settings]);
 
@@ -228,6 +238,91 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {showSettings && draft && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+            <div className="w-full max-w-3xl rounded-2xl bg-slate-950 border border-slate-800 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold">Settings</div>
+                  <div className="text-xs text-slate-400">Edit local file paths and Quest remote destinations</div>
+                </div>
+                <button
+                  className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
+                  onClick={() => setShowSettings(false)}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">APK path</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.apkPath ?? ""} onChange={(e) => setDraft({ ...draft, apkPath: e.target.value })} />
+                </label>
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">Package name (for uninstall/installed badge)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.packageName ?? ""} onChange={(e) => setDraft({ ...draft, packageName: e.target.value })} />
+                </label>
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">Base config.txt path</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.configBasePath ?? ""} onChange={(e) => setDraft({ ...draft, configBasePath: e.target.value })} />
+                </label>
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">Branding folder path (local)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.brandingPath ?? ""} onChange={(e) => setDraft({ ...draft, brandingPath: e.target.value })} />
+                </label>
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">360 video path (local)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.videoPath ?? ""} onChange={(e) => setDraft({ ...draft, videoPath: e.target.value })} />
+                </label>
+
+                <div className="hidden md:block" />
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">Remote config destination (Quest)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.remoteConfigPath ?? ""} onChange={(e) => setDraft({ ...draft, remoteConfigPath: e.target.value })} />
+                </label>
+
+                <label className="block">
+                  <div className="text-xs text-slate-400 mb-1">Remote branding destination dir (Quest)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.remoteBrandingDir ?? ""} onChange={(e) => setDraft({ ...draft, remoteBrandingDir: e.target.value })} />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <div className="text-xs text-slate-400 mb-1">Remote 360 video destination (Quest)</div>
+                  <input className="w-full rounded-lg bg-slate-900 border border-slate-800 px-3 py-2" value={draft.remoteVideoPath ?? ""} onChange={(e) => setDraft({ ...draft, remoteVideoPath: e.target.value })} />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  className="text-xs rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3 py-2"
+                  onClick={() => {
+                    setDraft(settings);
+                  }}
+                >
+                  Reset
+                </button>
+                <button
+                  className="text-xs rounded-md bg-emerald-600 hover:bg-emerald-500 px-3 py-2 font-semibold"
+                  onClick={async () => {
+                    const s = await putSettings(draft);
+                    setSettings(s);
+                    setDraft(s);
+                    setShowSettings(false);
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="rounded-2xl bg-black border border-slate-800 p-4">
           <div className="text-xs text-slate-400 mb-2">Registros de Actividad</div>

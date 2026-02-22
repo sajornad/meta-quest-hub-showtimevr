@@ -6,6 +6,12 @@ export type Settings = {
   videoPath: string;
   brandingPath: string;
   configBasePath: string;
+
+  // Remote destinations on the Quest (editable)
+  remoteConfigPath: string;
+  remoteBrandingDir: string;
+  remoteVideoPath: string;
+
   lastUsedID: number; // 1-50
   autoIncrement: boolean;
   packageName: string;
@@ -16,6 +22,11 @@ const DEFAULT_SETTINGS: Settings = {
   videoPath: "",
   brandingPath: "",
   configBasePath: "",
+
+  remoteConfigPath: "/sdcard/Showtime VR/config.txt",
+  remoteBrandingDir: "/sdcard/Showtime VR/Branding/",
+  remoteVideoPath: "/sdcard/Showtime VR/Videos/2D/",
+
   lastUsedID: 1,
   autoIncrement: true,
   packageName: "",

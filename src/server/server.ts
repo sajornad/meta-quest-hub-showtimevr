@@ -58,10 +58,13 @@ app.post("/api/provision", async (req, res) => {
   try {
     log.info(`Provisioning started for ${serial} with ID ${id}`);
 
+    // 1) install APK first
     adb.installApk(serial, settings.apkPath, log);
-    adb.pushFile(serial, tempPath, "/sdcard/Showtime VR/config.txt", log);
-    adb.pushDir(serial, settings.brandingPath, "/sdcard/Download/", log);
-    adb.pushFile(serial, settings.videoPath, "/sdcard/Showtime VR/Branding", log);
+
+    // 2) push config + assets to configurable remote paths
+    adb.pushFile(serial, tempPath, settings.remoteConfigPath, log);
+    adb.pushDir(serial, settings.brandingPath, settings.remoteBrandingDir, log);
+    adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log);
 
     // update lastUsedID if auto increment
     settings.lastUsedID = Math.max(1, Math.min(50, Math.floor(id)));

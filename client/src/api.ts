@@ -3,6 +3,11 @@ export type Settings = {
   videoPath: string;
   brandingPath: string;
   configBasePath: string;
+
+  remoteConfigPath: string;
+  remoteBrandingDir: string;
+  remoteVideoPath: string;
+
   lastUsedID: number;
   autoIncrement: boolean;
   packageName: string;

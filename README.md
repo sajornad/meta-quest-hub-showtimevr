@@ -19,11 +19,14 @@ Settings are stored in:
 - `./.data/settings.json`
 
 Fields:
-- `apkPath`: path to your APK
+- `apkPath`: path to your APK (**installed first** in provisioning)
 - `videoPath`: path to your 360 video file
-- `brandingPath`: folder to push to `/sdcard/Download/`
+- `brandingPath`: local folder to push
 - `configBasePath`: base `config.txt` path
 - `packageName`: Android package name used for installed/uninstall checks
+- `remoteConfigPath`: remote destination for config on the Quest
+- `remoteBrandingDir`: remote destination directory for branding on the Quest
+- `remoteVideoPath`: remote destination for the 360 video on the Quest
 - `lastUsedID`: integer 1-50
 - `autoIncrement`: boolean
 
