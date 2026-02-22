@@ -105,6 +105,21 @@ export default function App() {
     setPickerParent(r.parent);
   }
 
+  function fieldLabel(field: string | null) {
+    switch (field) {
+      case "apkPath":
+        return "APK path";
+      case "configBasePath":
+        return "Base config.txt path";
+      case "videoPath":
+        return "360 video path (local)";
+      case "brandingPath":
+        return "Branding folder path (local)";
+      default:
+        return field ?? "";
+    }
+  }
+
   async function openPicker(field: string, mode: "file" | "dir") {
     setPickerField(field);
     setPickerMode(mode);
@@ -456,6 +471,7 @@ export default function App() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold">Select {pickerMode === "dir" ? "folder" : "file"}</div>
+                  <div className="text-xs text-slate-400">For: <span className="text-slate-200">{fieldLabel(pickerField)}</span></div>
                   <div className="text-xs text-slate-400 break-all">{pickerPath}</div>
                 </div>
                 <button
