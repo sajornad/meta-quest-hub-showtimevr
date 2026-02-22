@@ -88,6 +88,12 @@ export function pushDir(serial: string, localDir: string, remoteDir: string, log
   exec(`adb -s ${serial} push "${localDir}" "${remoteDir}"`, log);
 }
 
+// Push ONLY the contents of localDir into remoteDir (not the folder itself).
+export function pushDirContents(serial: string, localDir: string, remoteDir: string, log: LogBus) {
+  // Using "/." keeps semantics: copy directory contents.
+  exec(`adb -s ${serial} push "${localDir}/." "${remoteDir}"`, log);
+}
+
 export function uninstall(serial: string, packageName: string, log: LogBus) {
   if (!packageName) throw new Error("packageName is not set");
   exec(`adb -s ${serial} uninstall ${packageName}`, log);

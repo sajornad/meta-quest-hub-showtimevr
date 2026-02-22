@@ -15,8 +15,21 @@ export class ConfigManipulator {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mqh-config-"));
     const tempPath = path.join(tmpDir, "config.txt");
 
-    const appended = base.replace(/\s+$/g, "") + `\n#ID_INCREMENTAL=${currentId}\n`;
-    fs.writeFileSync(tempPath, appended, "utf-8");
+    // The base config uses '#' as a placeholder for the incremental ID.
+    // We only replace placeholders in known fields, not general comments.
+    let next = base;
+    next = next.replace(/3GOVideo-#/g, `3GOVideo-${currentId}`);
+    next = next.replace(/(\bnr\s*=\s*)#/gi, `$1${currentId}`);
+
+    // Update or append the marker line.
+    if (/#\s*ID_INCREMENTAL\s*=/.test(next)) {
+      next = next.replace(/#\s*ID_INCREMENTAL\s*=\s*#?/gi, `#ID_INCREMENTAL=${currentId}`);
+      next = next.replace(/(#ID_INCREMENTAL=)\d+/gi, `$1${currentId}`);
+    } else {
+      next = next.replace(/\s+$/g, "") + `\n#ID_INCREMENTAL=${currentId}\n`;
+    }
+
+    fs.writeFileSync(tempPath, next, "utf-8");
 
     const cleanup = () => {
       try {
