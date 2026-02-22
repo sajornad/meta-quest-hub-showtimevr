@@ -48,21 +48,24 @@ app.get("/api/devices", async (_req, res) => {
 
 app.post("/api/provision", async (req, res) => {
   const { serial, currentId } = req.body ?? {};
-  if (!serial) return res.status(400).json({ error: "serial is required" });
+  if (!serial) return res.status(400).json({ ok: false, error: "serial is required" });
   const id = Number(currentId);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "currentId must be a number" });
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "currentId must be a number" });
 
-  const manip = new ConfigManipulator(settings.configBasePath);
-  const { tempPath, cleanup } = manip.createTempConfigWithId(id);
-
+  let cleanup: (() => void) | null = null;
   try {
     log.info(`Provisioning started for ${serial} with ID ${id}`);
+
+    // Build temp config inside try so we can return JSON errors.
+    const manip = new ConfigManipulator(settings.configBasePath);
+    const tmp = manip.createTempConfigWithId(id);
+    cleanup = tmp.cleanup;
 
     // 1) install APK first
     adb.installApk(serial, settings.apkPath, log);
 
     // 2) push config + assets to configurable remote paths
-    adb.pushFile(serial, tempPath, settings.remoteConfigPath, log);
+    adb.pushFile(serial, tmp.tempPath, settings.remoteConfigPath, log);
     adb.pushDir(serial, settings.brandingPath, settings.remoteBrandingDir, log);
     adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log);
 
@@ -76,10 +79,17 @@ app.post("/api/provision", async (req, res) => {
     log.info(`Provisioning complete for ${serial}`);
     res.json({ ok: true, nextId: settings.lastUsedID });
   } catch (e: any) {
-    log.error(e?.message ?? String(e));
-    res.status(500).json({ ok: false, error: e?.message ?? String(e) });
+    const msg = e?.message ?? String(e);
+    log.error(msg);
+    // Many failures here are bad paths / adb errors; treat as 400 unless it looks like an internal crash.
+    const status = msg.includes("not set") || msg.includes("not found") ? 400 : 500;
+    res.status(status).json({ ok: false, error: msg });
   } finally {
-    cleanup();
+    try {
+      cleanup?.();
+    } catch {
+      // ignore
+    }
   }
 });
 
