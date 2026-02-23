@@ -103,7 +103,7 @@ app.post("/api/provision", async (req, res) => {
   };
   try {
     log.info(`Provisioning started for ${serial} with ID ${id}`);
-    progress(5, "Starting provisioning");
+    progress(5, "Working…");
 
     // Build temp config inside try so we can return JSON errors.
     const manip = new ConfigManipulator(settings.configBasePath);
@@ -111,27 +111,28 @@ app.post("/api/provision", async (req, res) => {
     cleanup = tmp.cleanup;
 
     // 1) install APK first
-    progress(15, `Installing APK from ${settings.apkPath}`);
+    progress(10, "Installing APK");
     log.info(`[serial=${serial}] Installing APK: ${settings.apkPath}`);
     adb.installApk(serial, settings.apkPath, log, { quiet: true });
     log.info(`[serial=${serial}] OK: APK installed (${settings.apkPath})`);
-    progress(45, "APK installed");
 
-    // 2) push config + assets to configurable remote paths
-    progress(55, `Transferring config.txt → ${settings.remoteConfigPath}`);
+    // 2) push config
+    progress(15, "Pushing Config");
     log.info(`[serial=${serial}] Pushing config.txt: ${tmp.tempPath} → ${settings.remoteConfigPath}`);
     adb.pushFile(serial, tmp.tempPath, settings.remoteConfigPath, log, { quiet: true });
     log.info(`[serial=${serial}] OK: Config transferred to ${settings.remoteConfigPath}`);
 
-    progress(70, `Transferring 360 video → ${settings.remoteVideoPath}`);
-    log.info(`[serial=${serial}] Pushing 360 video: ${settings.videoPath} → ${settings.remoteVideoPath}`);
-    adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log, { quiet: true });
-    log.info(`[serial=${serial}] OK: 360 video transferred to ${settings.remoteVideoPath}`);
-
-    progress(85, `Transferring branding folder contents → ${settings.remoteBrandingDir}`);
+    // 3) push branding
+    progress(50, "Pushing Branding");
     log.info(`[serial=${serial}] Pushing branding contents: ${settings.brandingPath}/. → ${settings.remoteBrandingDir}`);
     adb.pushDirContents(serial, settings.brandingPath, settings.remoteBrandingDir, log, { quiet: true });
     log.info(`[serial=${serial}] OK: Branding contents transferred to ${settings.remoteBrandingDir}`);
+
+    // 4) push 360 video
+    progress(90, "Pushing 360 Video");
+    log.info(`[serial=${serial}] Pushing 360 video: ${settings.videoPath} → ${settings.remoteVideoPath}`);
+    adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log, { quiet: true });
+    log.info(`[serial=${serial}] OK: 360 video transferred to ${settings.remoteVideoPath}`);
 
     // update lastUsedID if auto increment
     settings.lastUsedID = Math.max(1, Math.min(50, Math.floor(id)));
@@ -140,7 +141,7 @@ app.post("/api/provision", async (req, res) => {
     }
     saveSettings(settings);
 
-    progress(100, "Provisioning complete");
+    progress(100, "Transfer Successful");
     log.info(`Provisioning complete for ${serial}`);
     res.json({ ok: true, nextId: settings.lastUsedID });
   } catch (e: any) {
