@@ -11,12 +11,20 @@ function clampId(v: number) {
   return n;
 }
 
+function parseAndClampId(raw: string) {
+  // Allow empty while typing; on blur/actions we normalize.
+  const n = Number(raw);
+  return clampId(n);
+}
+
 export default function App() {
   const [settings, setSettings] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [draft, setDraft] = useState<any>(null);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [currentId, setCurrentId] = useState<number>(1);
+  // Keep a text state so the user can type freely (avoid the "it prepends 1" issue
+  // caused by clamping on every keypress when the value is temporarily empty/NaN).
+  const [currentIdText, setCurrentIdText] = useState<string>("1");
   const [autoInc, setAutoInc] = useState<boolean>(true);
   const [logs, setLogs] = useState<{ ts: number; level: string; message: string }[]>([]);
   const [busySerial, setBusySerial] = useState<string | null>(null);
@@ -35,7 +43,8 @@ export default function App() {
       const s = await getSettings();
       setSettings(s);
       setDraft(s);
-      setCurrentId(s.lastUsedID ?? 1);
+      const id = clampId(Number(s.lastUsedID ?? 1));
+      setCurrentIdText(String(id));
       setAutoInc(!!s.autoIncrement);
     })().catch(console.error);
   }, []);
@@ -147,9 +156,20 @@ export default function App() {
               <div className="text-xs text-slate-400 mb-1">Current ID (1-50)</div>
               <input
                 className="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2"
-                type="number"
-                value={currentId}
-                onChange={(e) => setCurrentId(clampId(Number(e.target.value)))}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={currentIdText}
+                onChange={(e) => {
+                  // digits only
+                  const v = e.target.value.replace(/[^0-9]/g, "");
+                  setCurrentIdText(v);
+                }}
+                onBlur={() => {
+                  // Normalize on blur: if empty or 0 => 1; clamp to 1..50.
+                  const id = parseAndClampId(currentIdText || "0");
+                  setCurrentIdText(String(id));
+                }}
               />
             </label>
 
@@ -173,7 +193,9 @@ export default function App() {
             <button
               className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-sm"
               onClick={async () => {
-                const s = await putSettings({ lastUsedID: currentId });
+                const id = parseAndClampId(currentIdText || "0");
+                setCurrentIdText(String(id));
+                const s = await putSettings({ lastUsedID: id });
                 setSettings(s);
               }}
             >
@@ -271,11 +293,15 @@ export default function App() {
                         try {
                           setBusySerial(d.serial);
                           setBusyOp("install");
+                          const id = parseAndClampId(currentIdText || "0");
+                          setCurrentIdText(String(id));
+
                           // ensure lastUsedID sync
-                          await putSettings({ lastUsedID: currentId });
-                          const r = await provision(d.serial, currentId);
+                          await putSettings({ lastUsedID: id });
+                          const r = await provision(d.serial, id);
                           if (r.ok && typeof r.nextId === "number") {
-                            setCurrentId(r.nextId);
+                            const nextId = clampId(r.nextId);
+                            setCurrentIdText(String(nextId));
                             const s = await getSettings();
                             setSettings(s);
                           }
