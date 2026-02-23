@@ -108,22 +108,26 @@ app.post("/api/provision", async (req, res) => {
 
     // 1) install APK first
     progress(15, `Installing APK from ${settings.apkPath}`);
+    log.info(`[serial=${serial}] Installing APK: ${settings.apkPath}`);
     adb.installApk(serial, settings.apkPath, log);
-    log.info(`OK: APK installed successfully (${settings.apkPath})`);
+    log.info(`[serial=${serial}] OK: APK installed (${settings.apkPath})`);
     progress(45, "APK installed");
 
     // 2) push config + assets to configurable remote paths
     progress(55, `Transferring config.txt → ${settings.remoteConfigPath}`);
+    log.info(`[serial=${serial}] Pushing config.txt: ${tmp.tempPath} → ${settings.remoteConfigPath}`);
     adb.pushFile(serial, tmp.tempPath, settings.remoteConfigPath, log);
-    log.info(`OK: Config transferred to ${settings.remoteConfigPath}`);
+    log.info(`[serial=${serial}] OK: Config transferred to ${settings.remoteConfigPath}`);
 
     progress(70, `Transferring 360 video → ${settings.remoteVideoPath}`);
+    log.info(`[serial=${serial}] Pushing 360 video: ${settings.videoPath} → ${settings.remoteVideoPath}`);
     adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log);
-    log.info(`OK: 360 video transferred to ${settings.remoteVideoPath}`);
+    log.info(`[serial=${serial}] OK: 360 video transferred to ${settings.remoteVideoPath}`);
 
     progress(85, `Transferring branding folder contents → ${settings.remoteBrandingDir}`);
+    log.info(`[serial=${serial}] Pushing branding contents: ${settings.brandingPath}/. → ${settings.remoteBrandingDir}`);
     adb.pushDirContents(serial, settings.brandingPath, settings.remoteBrandingDir, log);
-    log.info(`OK: Branding contents transferred to ${settings.remoteBrandingDir}`);
+    log.info(`[serial=${serial}] OK: Branding contents transferred to ${settings.remoteBrandingDir}`);
 
     // update lastUsedID if auto increment
     settings.lastUsedID = Math.max(1, Math.min(50, Math.floor(id)));

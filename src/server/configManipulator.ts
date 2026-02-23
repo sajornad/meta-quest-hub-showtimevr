@@ -21,13 +21,9 @@ export class ConfigManipulator {
     next = next.replace(/3GOVideo-#/g, `3GOVideo-${currentId}`);
     next = next.replace(/(\bnr\s*=\s*)#/gi, `$1${currentId}`);
 
-    // Update or append the marker line.
-    if (/#\s*ID_INCREMENTAL\s*=/.test(next)) {
-      next = next.replace(/#\s*ID_INCREMENTAL\s*=\s*#?/gi, `#ID_INCREMENTAL=${currentId}`);
-      next = next.replace(/(#ID_INCREMENTAL=)\d+/gi, `$1${currentId}`);
-    } else {
-      next = next.replace(/\s+$/g, "") + `\n#ID_INCREMENTAL=${currentId}\n`;
-    }
+    // IMPORTANT: do NOT include any "#ID_INCREMENTAL=..." marker line in the output.
+    // If the base config contains it, remove it.
+    next = next.replace(/^\s*#\s*ID_INCREMENTAL\s*=.*\r?\n?/gim, "");
 
     fs.writeFileSync(tempPath, next, "utf-8");
 
