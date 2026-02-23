@@ -617,6 +617,18 @@ export default function App() {
             ))}
           </div>
         </section>
+
+        <footer className="pt-2 text-center text-xs text-slate-500">
+          Powered by{" "}
+          <a
+            href="https://3govideo.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-300 hover:text-white underline underline-offset-2"
+          >
+            3GOVideo
+          </a>
+        </footer>
       </div>
     </div>
   );
