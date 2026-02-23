@@ -5,7 +5,7 @@ Local macOS tool to manage Meta Quest devices via ADB, installing Config.txt, 36
 ## Run (one command)
 
 ```bash
-cd /Users/danielrojasroa/.openclaw/workspace/meta-quest-provisioner
+cd meta-quest-provisioner
 ./run.sh
 ```
 
