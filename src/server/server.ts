@@ -75,10 +75,14 @@ app.get("/api/fs/list", (req, res) => {
 
 app.get("/api/devices", async (_req, res) => {
   try {
-    const devices = adb.getDevices(log);
+    // Device polling happens often (UI auto-refresh). Keep it quiet so the Activity Log
+    // shows provisioning steps instead of repeating adb polling output.
+    const quiet = { quiet: true } as const;
+
+    const devices = adb.getDevices(undefined, quiet);
     const enriched = devices.map((d) => {
-      const battery = adb.getBattery(d.serial, log);
-      const installed = adb.isPackageInstalled(d.serial, settings.packageName, log);
+      const battery = adb.getBattery(d.serial, undefined, quiet);
+      const installed = adb.isPackageInstalled(d.serial, settings.packageName, undefined, quiet);
       return { ...d, battery, installed };
     });
     res.json(enriched);
@@ -109,24 +113,24 @@ app.post("/api/provision", async (req, res) => {
     // 1) install APK first
     progress(15, `Installing APK from ${settings.apkPath}`);
     log.info(`[serial=${serial}] Installing APK: ${settings.apkPath}`);
-    adb.installApk(serial, settings.apkPath, log);
+    adb.installApk(serial, settings.apkPath, log, { quiet: true });
     log.info(`[serial=${serial}] OK: APK installed (${settings.apkPath})`);
     progress(45, "APK installed");
 
     // 2) push config + assets to configurable remote paths
     progress(55, `Transferring config.txt → ${settings.remoteConfigPath}`);
     log.info(`[serial=${serial}] Pushing config.txt: ${tmp.tempPath} → ${settings.remoteConfigPath}`);
-    adb.pushFile(serial, tmp.tempPath, settings.remoteConfigPath, log);
+    adb.pushFile(serial, tmp.tempPath, settings.remoteConfigPath, log, { quiet: true });
     log.info(`[serial=${serial}] OK: Config transferred to ${settings.remoteConfigPath}`);
 
     progress(70, `Transferring 360 video → ${settings.remoteVideoPath}`);
     log.info(`[serial=${serial}] Pushing 360 video: ${settings.videoPath} → ${settings.remoteVideoPath}`);
-    adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log);
+    adb.pushFile(serial, settings.videoPath, settings.remoteVideoPath, log, { quiet: true });
     log.info(`[serial=${serial}] OK: 360 video transferred to ${settings.remoteVideoPath}`);
 
     progress(85, `Transferring branding folder contents → ${settings.remoteBrandingDir}`);
     log.info(`[serial=${serial}] Pushing branding contents: ${settings.brandingPath}/. → ${settings.remoteBrandingDir}`);
-    adb.pushDirContents(serial, settings.brandingPath, settings.remoteBrandingDir, log);
+    adb.pushDirContents(serial, settings.brandingPath, settings.remoteBrandingDir, log, { quiet: true });
     log.info(`[serial=${serial}] OK: Branding contents transferred to ${settings.remoteBrandingDir}`);
 
     // update lastUsedID if auto increment
@@ -159,7 +163,7 @@ app.post("/api/uninstall", async (req, res) => {
   if (!serial) return res.status(400).json({ error: "serial is required" });
   try {
     log.info(`Uninstall started for ${serial}`);
-    adb.uninstall(serial, settings.packageName, log);
+    adb.uninstall(serial, settings.packageName, log, { quiet: true });
     log.info(`Uninstall complete for ${serial}`);
     res.json({ ok: true });
   } catch (e: any) {

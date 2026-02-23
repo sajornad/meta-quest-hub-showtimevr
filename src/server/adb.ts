@@ -10,14 +10,21 @@ export type AdbDevice = {
   installed?: boolean;
 };
 
-function exec(cmd: string, log: LogBus) {
-  log.info(`$ ${cmd}`);
+export type AdbExecOptions = {
+  /** If true, do not log the raw adb command/stdout (only errors). */
+  quiet?: boolean;
+};
+
+function exec(cmd: string, log?: LogBus, opts: AdbExecOptions = {}) {
+  if (log && !opts.quiet) log.info(`$ ${cmd}`);
+
   const res = shell.exec(cmd, { silent: true });
   if (res.code !== 0) {
-    log.error(res.stderr || `Command failed with code ${res.code}`);
+    if (log) log.error(res.stderr || `Command failed with code ${res.code}`);
     throw new Error(res.stderr || `Command failed: ${cmd}`);
   }
-  if (res.stdout?.trim()) log.info(res.stdout.trim());
+
+  if (log && !opts.quiet && res.stdout?.trim()) log.info(res.stdout.trim());
   return res.stdout;
 }
 
@@ -49,14 +56,14 @@ export function parseAdbDevices(output: string): AdbDevice[] {
   return devices;
 }
 
-export function getDevices(log: LogBus): AdbDevice[] {
-  const out = exec("adb devices -l", log);
+export function getDevices(log?: LogBus, opts: AdbExecOptions = {}): AdbDevice[] {
+  const out = exec("adb devices -l", log, opts);
   return parseAdbDevices(out);
 }
 
-export function getBattery(serial: string, log: LogBus): number | undefined {
+export function getBattery(serial: string, log?: LogBus, opts: AdbExecOptions = {}): number | undefined {
   try {
-    const out = exec(`adb -s ${serial} shell dumpsys battery`, log);
+    const out = exec(`adb -s ${serial} shell dumpsys battery`, log, opts);
     // Look for: level: 85
     const m = out.match(/level:\s*(\d+)/i);
     return m ? Number(m[1]) : undefined;
@@ -65,36 +72,36 @@ export function getBattery(serial: string, log: LogBus): number | undefined {
   }
 }
 
-export function isPackageInstalled(serial: string, packageName: string, log: LogBus): boolean | undefined {
+export function isPackageInstalled(serial: string, packageName: string, log?: LogBus, opts: AdbExecOptions = {}): boolean | undefined {
   if (!packageName) return undefined;
   try {
-    const out = exec(`adb -s ${serial} shell pm list packages ${packageName}`, log);
+    const out = exec(`adb -s ${serial} shell pm list packages ${packageName}`, log, opts);
     return out.includes(packageName);
   } catch {
     return undefined;
   }
 }
 
-export function installApk(serial: string, apkPath: string, log: LogBus) {
+export function installApk(serial: string, apkPath: string, log?: LogBus, opts: AdbExecOptions = {}) {
   if (!apkPath) throw new Error("apkPath is not set");
-  exec(`adb -s ${serial} install -r "${apkPath}"`, log);
+  exec(`adb -s ${serial} install -r "${apkPath}"`, log, opts);
 }
 
-export function pushFile(serial: string, localPath: string, remotePath: string, log: LogBus) {
-  exec(`adb -s ${serial} push "${localPath}" "${remotePath}"`, log);
+export function pushFile(serial: string, localPath: string, remotePath: string, log?: LogBus, opts: AdbExecOptions = {}) {
+  exec(`adb -s ${serial} push "${localPath}" "${remotePath}"`, log, opts);
 }
 
-export function pushDir(serial: string, localDir: string, remoteDir: string, log: LogBus) {
-  exec(`adb -s ${serial} push "${localDir}" "${remoteDir}"`, log);
+export function pushDir(serial: string, localDir: string, remoteDir: string, log?: LogBus, opts: AdbExecOptions = {}) {
+  exec(`adb -s ${serial} push "${localDir}" "${remoteDir}"`, log, opts);
 }
 
 // Push ONLY the contents of localDir into remoteDir (not the folder itself).
-export function pushDirContents(serial: string, localDir: string, remoteDir: string, log: LogBus) {
+export function pushDirContents(serial: string, localDir: string, remoteDir: string, log?: LogBus, opts: AdbExecOptions = {}) {
   // Using "/." keeps semantics: copy directory contents.
-  exec(`adb -s ${serial} push "${localDir}/." "${remoteDir}"`, log);
+  exec(`adb -s ${serial} push "${localDir}/." "${remoteDir}"`, log, opts);
 }
 
-export function uninstall(serial: string, packageName: string, log: LogBus) {
+export function uninstall(serial: string, packageName: string, log?: LogBus, opts: AdbExecOptions = {}) {
   if (!packageName) throw new Error("packageName is not set");
-  exec(`adb -s ${serial} uninstall ${packageName}`, log);
+  exec(`adb -s ${serial} uninstall ${packageName}`, log, opts);
 }
