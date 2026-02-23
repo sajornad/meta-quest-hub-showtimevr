@@ -131,11 +131,7 @@ export default function App() {
       } finally {
         setBusySerial(null);
         setBusyOp(null);
-        setProgressBySerial((prev) => {
-          const next = { ...prev };
-          delete next[d.serial];
-          return next;
-        });
+        // Keep last progress visible; it will update on the next run.
       }
     }
   }
@@ -150,11 +146,7 @@ export default function App() {
       } finally {
         setBusySerial(null);
         setBusyOp(null);
-        setProgressBySerial((prev) => {
-          const next = { ...prev };
-          delete next[d.serial];
-          return next;
-        });
+        // Keep last progress visible; it will update on the next run.
       }
     }
   }
@@ -309,12 +301,12 @@ export default function App() {
                       </span>
                     </div>
 
-                    {isBusy && (
+                    {(isBusy || progressBySerial[d.serial]) && (
                       <div className="pt-1 space-y-1">
                         {(() => {
                           const p = progressBySerial[d.serial];
                           const pct = Math.max(0, Math.min(100, p?.pct ?? 0));
-                          const label = p?.label ?? "Working…";
+                          const label = p?.label ?? (isBusy ? "Working…" : "—");
                           return (
                             <>
                               <div className="flex items-center justify-between text-[11px] text-slate-400">
@@ -367,11 +359,7 @@ export default function App() {
                         } finally {
                           setBusySerial(null);
                           setBusyOp(null);
-                          setProgressBySerial((prev) => {
-                            const next = { ...prev };
-                            delete next[d.serial];
-                            return next;
-                          });
+                          // Keep last progress visible; it will update on the next run.
                         }
                       }}
                     >
@@ -390,11 +378,7 @@ export default function App() {
                         } finally {
                           setBusySerial(null);
                           setBusyOp(null);
-                          setProgressBySerial((prev) => {
-                            const next = { ...prev };
-                            delete next[d.serial];
-                            return next;
-                          });
+                          // Keep last progress visible; it will update on the next run.
                         }
                       }}
                     >
