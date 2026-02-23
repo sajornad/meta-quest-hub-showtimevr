@@ -53,7 +53,8 @@ export default function App() {
     const off = subscribeLogs((line) => {
       // Capture progress hints from server logs.
       const msg = String(line?.message ?? "");
-      const m = msg.match(/\[progress serial=([^\s\]]+) pct=(\d+)\]\s*(.*)$/);
+      // Be tolerant: some log transports may append extra text after the message.
+      const m = msg.match(/\[progress serial=([^\s\]]+) pct=(\d+)\]\s*([^\n\r]*)/);
       if (m) {
         const serial = m[1];
         const pct = Number(m[2]);
