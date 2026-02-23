@@ -107,6 +107,58 @@ export default function App() {
 
   const canProvision = (serial: string) => !busySerial || busySerial === serial;
 
+  async function provisionAll() {
+    // Sequential (safer with USB/ADB). Uses auto-increment behavior via API response.
+    let id = parseAndClampId(currentIdText || "0");
+    setCurrentIdText(String(id));
+
+    for (const d of devices) {
+      try {
+        setBusySerial(d.serial);
+        setBusyOp("install");
+
+        await putSettings({ lastUsedID: id });
+        const r = await provision(d.serial, id);
+
+        if (r.ok && typeof r.nextId === "number") {
+          id = clampId(r.nextId);
+          setCurrentIdText(String(id));
+          const s = await getSettings();
+          setSettings(s);
+        }
+
+        await refreshDevices();
+      } finally {
+        setBusySerial(null);
+        setBusyOp(null);
+        setProgressBySerial((prev) => {
+          const next = { ...prev };
+          delete next[d.serial];
+          return next;
+        });
+      }
+    }
+  }
+
+  async function uninstallAll() {
+    for (const d of devices) {
+      try {
+        setBusySerial(d.serial);
+        setBusyOp("uninstall");
+        await uninstall(d.serial);
+        await refreshDevices();
+      } finally {
+        setBusySerial(null);
+        setBusyOp(null);
+        setProgressBySerial((prev) => {
+          const next = { ...prev };
+          delete next[d.serial];
+          return next;
+        });
+      }
+    }
+  }
+
   async function loadPicker(p: string) {
     const r = await fsList(p);
     setPickerPath(r.path);
@@ -219,6 +271,24 @@ export default function App() {
                   />
                   Búsqueda automática
                 </label>
+                <button
+                  className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 disabled:opacity-50"
+                  disabled={!!busySerial}
+                  onClick={() => provisionAll().catch(console.error)}
+                  title="Instala y sincroniza en todas las gafas (una por una)"
+                >
+                  Instalar todo
+                </button>
+
+                <button
+                  className="text-xs rounded-md border border-red-700/70 text-red-300 hover:bg-red-900/20 px-3 py-2 disabled:opacity-50"
+                  disabled={!!busySerial}
+                  onClick={() => uninstallAll().catch(console.error)}
+                  title="Desinstala en todas las gafas (una por una)"
+                >
+                  Desinstalar todo
+                </button>
+
                 <button
                   className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
                   onClick={() => refreshDevices().catch(console.error)}

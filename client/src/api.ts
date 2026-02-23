@@ -63,15 +63,65 @@ export async function uninstall(serial: string): Promise<{ ok: boolean; error?: 
 }
 
 export function subscribeLogs(onLine: (line: any) => void) {
-  const es = new EventSource(`${API_BASE}/api/logs/stream`);
-  es.onmessage = (ev) => {
+  let stopped = false;
+  let es: EventSource | null = null;
+  let retryMs = 500;
+  let retryTimer: any = null;
+
+  const connect = () => {
+    if (stopped) return;
     try {
-      onLine(JSON.parse(ev.data));
+      es = new EventSource(`${API_BASE}/api/logs/stream`);
+    } catch {
+      scheduleReconnect();
+      return;
+    }
+
+    es.onmessage = (ev) => {
+      try {
+        onLine(JSON.parse(ev.data));
+      } catch {
+        /* ignore */
+      }
+    };
+
+    es.onerror = () => {
+      // Auto-reconnect (useful when the server restarts or the tab sleeps).
+      try {
+        es?.close();
+      } catch {
+        /* ignore */
+      }
+      es = null;
+      scheduleReconnect();
+    };
+  };
+
+  const scheduleReconnect = () => {
+    if (stopped) return;
+    if (retryTimer) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      retryMs = Math.min(5000, Math.floor(retryMs * 1.5));
+      connect();
+    }, retryMs);
+  };
+
+  connect();
+
+  return () => {
+    stopped = true;
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    try {
+      es?.close();
     } catch {
       /* ignore */
     }
+    es = null;
   };
-  return () => es.close();
 }
 
 export type FsEntry = { name: string; path: string; isDir: boolean };
