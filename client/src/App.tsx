@@ -71,7 +71,7 @@ export default function App() {
     return off;
   }, []);
 
-  const [autoSearch, setAutoSearch] = useState<boolean>(true);
+  // autoSearch removed: device polling is always on.
 
   async function refreshDevices() {
     const d = await getDevices();
@@ -82,11 +82,11 @@ export default function App() {
     refreshDevices().catch(() => void 0);
   }, []);
 
+  // Always poll devices every 5s (keeps the UI updated without extra controls).
   useEffect(() => {
-    if (!autoSearch) return;
     const t = setInterval(() => refreshDevices().catch(() => void 0), 5000);
     return () => clearInterval(t);
-  }, [autoSearch]);
+  }, []);
 
   const headerRight = useMemo(() => {
     if (!settings) return null;
@@ -263,14 +263,7 @@ export default function App() {
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-slate-200">Gafas Conectadas</div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={autoSearch}
-                    onChange={(e) => setAutoSearch(e.target.checked)}
-                  />
-                  Búsqueda automática
-                </label>
+                {/* Device polling is always enabled; removed auto-search toggle. */}
                 <button
                   className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 disabled:opacity-50"
                   disabled={!!busySerial}
@@ -289,12 +282,7 @@ export default function App() {
                   Desinstalar todo
                 </button>
 
-                <button
-                  className="text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2"
-                  onClick={() => refreshDevices().catch(console.error)}
-                >
-                  Buscar ahora
-                </button>
+                {/* Manual refresh removed (polling always on). */}
               </div>
             </div>
 
