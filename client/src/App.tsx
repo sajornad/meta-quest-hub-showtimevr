@@ -231,22 +231,22 @@ export default function App() {
 
                     {isBusy && (
                       <div className="pt-1 space-y-1">
-                        {progressBySerial[d.serial] ? (
-                          <>
-                            <div className="flex items-center justify-between text-[11px] text-slate-400">
-                              <span className="truncate">{progressBySerial[d.serial]!.label}</span>
-                              <span className="tabular-nums">{progressBySerial[d.serial]!.pct}%</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-slate-800 overflow-hidden" aria-label="Progress">
-                              <div
-                                className="h-full bg-emerald-500 transition-all"
-                                style={{ width: `${Math.max(0, Math.min(100, progressBySerial[d.serial]!.pct))}%` }}
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="loading-line" aria-label="Working" />
-                        )}
+                        {(() => {
+                          const p = progressBySerial[d.serial];
+                          const pct = Math.max(0, Math.min(100, p?.pct ?? 0));
+                          const label = p?.label ?? "Working…";
+                          return (
+                            <>
+                              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                <span className="truncate">{label}</span>
+                                <span className="tabular-nums">{pct}%</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-slate-800 overflow-hidden" aria-label="Progress">
+                                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
 
