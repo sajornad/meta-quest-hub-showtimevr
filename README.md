@@ -1,6 +1,6 @@
 # meta-quest-provisioner
 
-Local macOS tool to manage Meta Quest devices via ADB.
+Local macOS tool to manage Meta Quest devices via ADB, installing Confif.txt, 360 Video, Branding to Showtime VR.
 
 ## Run (one command)
 
